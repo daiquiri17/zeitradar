@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZEIT-Radar: neue Artikel</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+:root{--bg:#F2F4F7;--surface:#fff;--ink:#16202E;--muted:#5B6675;--line:#D9DEE5;--on:#0E6E8C;--pr:#7A2E4E;
+  --sans:"Public Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--serif:"Source Serif 4",Georgia,"Times New Roman",serif}
+@media (prefers-color-scheme:dark){:root{--bg:#10151C;--surface:#18202A;--ink:#E8EDF2;--muted:#9AA6B4;--line:#2A3441;--on:#5DB7D3;--pr:#D98AAE}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding:36px 20px 64px}
+h1{font:600 clamp(1.8rem,4.5vw,2.7rem)/1.15 var(--serif);margin:0 0 6px}
+.sub{color:var(--muted);margin:0 0 18px}
+.split{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--line);margin-bottom:10px}
+.split div{transition:flex-grow .4s ease}
+.split .on{background:var(--on)}.split .pr{background:var(--pr)}
+.legend{display:flex;gap:20px;flex-wrap:wrap;font-size:.92rem;color:var(--muted)}
+.legend b{color:var(--ink)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.days{display:flex;gap:6px;overflow-x:auto;padding:4px 2px 10px;margin:28px 0 6px}
+.days button{flex:none;font:inherit;font-size:.85rem;line-height:1.3;text-align:left;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 11px}
+.days button small{display:block;color:var(--muted)}
+.days button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.days button:focus-visible,input:focus-visible{outline:2px solid var(--on);outline-offset:2px}
+.tools{margin:8px 0 22px}
+.tools input{width:100%;max-width:380px;font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
+.note{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:var(--muted);margin:0 0 20px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+@media (max-width:760px){.cols{grid-template-columns:1fr}}
+.col h2{font:700 1.05rem/1.3 var(--sans);margin:0 0 14px;padding-left:10px;border-left:4px solid var(--c)}
+.col h2 span{color:var(--muted);font-weight:400}
+.grp{margin-bottom:18px}
+.grp h3{font-size:.82rem;font-weight:600;color:var(--muted);margin:0 0 5px}
+ul{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+li{padding:10px 14px;border-top:1px solid var(--line)}
+li:first-child{border-top:0}
+li a{color:var(--ink);text-decoration:none;font:400 1.03rem/1.42 var(--serif)}
+li a:hover{text-decoration:underline;text-decoration-color:var(--c);text-underline-offset:3px}
+li a:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+.meta{display:block;font-size:.78rem;color:var(--muted);margin-top:2px}
+.zp{display:inline-block;font:700 .68rem/1 var(--sans);color:var(--surface);background:var(--c);border-radius:3px;padding:3px 4px;margin-right:7px;vertical-align:2px}
+.empty{color:var(--muted);font-style:italic;margin:0}
+footer{margin-top:44px;color:var(--muted);font-size:.85rem}
+@media (prefers-reduced-motion:reduce){.split div{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="h">ZEIT-Radar</h1>
+    <p class="sub" id="sub"></p>
+    <div class="split" aria-hidden="true"><div class="on" id="bOn"></div><div class="pr" id="bPr"></div></div>
+    <div class="legend" id="legend"></div>
+  </header>
+  <nav class="days" id="days" aria-label="Tag auswählen"></nav>
+  <div class="tools"><input id="q" type="search" placeholder="Titel oder Ressort durchsuchen" aria-label="Artikel durchsuchen"></div>
+  <p class="note" id="note" hidden></p>
+  <div class="cols">
+    <section class="col" style="--c:var(--on)" aria-labelledby="tOn"><h2 id="tOn"></h2><div id="cOn"></div></section>
+    <section class="col" style="--c:var(--pr)" aria-labelledby="tPr"><h2 id="tPr"></h2><div id="cPr"></div></section>
+  </div>
+  <footer id="foot"></footer>
+</div>
+<script>
+const DATA = __DATA__;
+const $ = id => document.getElementById(id);
+const fmt = iso => { const [y, m, d] = iso.slice(0, 10).split("-"); return `${d}.${m}.${y}`; };
+const wday = (iso, style) => new Date(iso + "T12:00:00").toLocaleDateString("de-DE", { weekday: style });
+const el = (tag, props = {}, kids = []) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids); return n; };
+
+const byDay = {};
+for (const s of DATA.scans) byDay[s.date] ||= [];
+for (const a of DATA.articles) (byDay[a.first_seen] ||= []).push(a);
+const days = Object.keys(byDay).sort().reverse();
+let current = days[0], query = "";
+
+function renderDays() {
+  $("days").replaceChildren(...days.map(d => {
+    const b = el("button", { type: "button" }, [`${wday(d, "short")} ${fmt(d).slice(0, 6)}`, el("small", { textContent: `${byDay[d].length} neu` })]);
+    b.setAttribute("aria-pressed", d === current);
+    b.onclick = () => { current = d; render(); };
+    return b;
+  }));
+}
+
+function renderColumn(target, items, groupKey, groupLabel, sortGroups, metaFn) {
+  if (!items.length) { target.replaceChildren(el("p", { className: "empty", textContent: query ? "Keine Treffer." : "Keine neuen Artikel an diesem Tag." })); return; }
+  const groups = {};
+  for (const a of items) (groups[groupKey(a)] ||= []).push(a);
+  target.replaceChildren(...sortGroups(Object.keys(groups)).map(g => el("div", { className: "grp" }, [
+    el("h3", { textContent: `${groupLabel(g)} (${groups[g].length})` }),
+    el("ul", {}, groups[g].sort((x, y) => (y.first_seen_ts || "").localeCompare(x.first_seen_ts || "") || x.title.localeCompare(y.title, "de"))
+      .map(a => {
+        const link = el("a", { href: a.url, target: "_blank", rel: "noopener", textContent: a.title });
+        const kids = a.zplus ? [el("span", { className: "zp", textContent: "Z+", title: "Abo-Inhalt" }), link] : [link];
+        const meta = metaFn(a);
+        if (meta) kids.push(el("span", { className: "meta", textContent: meta }));
+        return el("li", {}, kids);
+      }))
+  ])));
+}
+
+function render() {
+  renderDays();
+  if (!current) { $("sub").textContent = "Noch kein Scan gelaufen."; return; }
+  const q = query.toLowerCase();
+  const all = byDay[current];
+  const list = all.filter(a => !q || a.title.toLowerCase().includes(q) || (a.ressort || "").toLowerCase().includes(q));
+  const on = list.filter(a => a.redaktion === "online"), pr = list.filter(a => a.redaktion === "zeit");
+  $("h").textContent = `${wday(current, "long")}, ${fmt(current)}`;
+  $("sub").textContent = `${all.length} neue Artikel auf zeit.de`;
+  $("bOn").style.flexGrow = on.length; $("bPr").style.flexGrow = pr.length;
+  $("legend").replaceChildren(
+    el("span", {}, [el("span", { className: "dot", style: "background:var(--on)" }), el("b", { textContent: on.length }), " ZEIT ONLINE"]),
+    el("span", {}, [el("span", { className: "dot", style: "background:var(--pr)" }), el("b", { textContent: pr.length }), " DIE ZEIT (Print)"]));
+  const first = DATA.scans.find(s => s.date === current && s.erster_scan);
+  $("note").hidden = !first;
+  $("note").textContent = first ? "Das war der erste Scan. Deshalb zählen heute alle Artikel der Startseite als neu, ab morgen siehst du nur echte Neuzugänge." : "";
+  $("tOn").replaceChildren("ZEIT ONLINE ", el("span", { textContent: on.length }));
+  $("tPr").replaceChildren("DIE ZEIT ", el("span", { textContent: pr.length }));
+  renderColumn($("cOn"), on, a => a.ressort || "Sonstiges", g => g, ks => ks.sort((a, b) => a.localeCompare(b, "de")), () => "");
+  renderColumn($("cPr"), pr, a => a.ausgabe, g => `Ausgabe ${g}`,
+    ks => ks.sort((a, b) => { const [ia, ya] = a.split("/").map(Number), [ib, yb] = b.split("/").map(Number); return yb - ya || ib - ia; }),
+    a => a.ressort);
+  const last = DATA.scans[DATA.scans.length - 1];
+  const foot = [];
+  if (last) foot.push(`Letzter Scan: ${fmt(last.date)}, ${last.ts.slice(11, 16)} Uhr. Auf der Startseite gefunden: ${last.gefunden} Artikel.`);
+  if (last && last.fehler && last.fehler.length) foot.push(" Hinweis: " + last.fehler.join("; "));
+  $("foot").textContent = foot.join("");
+}
+
+$("q").addEventListener("input", e => { query = e.target.value.trim(); render(); });
+render();
+</script>
+</body>
+</html>
